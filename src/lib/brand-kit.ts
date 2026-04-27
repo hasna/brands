@@ -4,6 +4,7 @@ import { dataDir } from "../db/database.js";
 import { getBrand, updateBrand } from "../db/brands.js";
 import { getLogo, listLogos } from "../db/logos.js";
 import { generate } from "./generate.js";
+import { OpenAIProvider } from "./providers/openai.js";
 import { QuiverProvider } from "./providers/quiver.js";
 import {
   removeWhiteBackground,
@@ -281,84 +282,70 @@ export async function buildBrandKit(options: BrandKitOptions): Promise<BrandKitR
     files.push(write(shortcutDir, `shortcut-white-${size}.png`, onWhite));
   }
 
-  // ── Step 7: Social Covers ─────────────────────────────────────────────────
+  // ── Step 7: Social Covers (with logo reference) ────────────────────────────
   if (!options.skipSocialCovers) {
-    console.log("  Generating social covers...");
+    console.log("  Generating social covers (with logo reference)...");
     const twitterDir = ensureSubdir(root, "Social Media", "Twitter");
     const linkedinDir = ensureSubdir(root, "Social Media", "LinkedIn");
 
+    const openai = new OpenAIProvider();
+    const { readFileSync } = await import("node:fs");
+    const logoRef = readFileSync(logo.filePath);
+
     try {
-      const coverPrompt = `Professional social media banner for "${brand.name}". ${brand.description || ""}. Feature the brand logo subtly on the right side. Use brand colors: ${primaryColor}, ${secondaryColor}. Modern, clean, professional tech company aesthetic. No placeholder text.`;
+      const coverPrompt = `Design a professional social media banner for the company "${brand.name}". ${brand.description || ""}. Use the provided logo — place it on the right side of the banner. Use exactly these brand colors: primary ${primaryColor}, secondary ${secondaryColor}, accent ${accentColor}. Modern, clean, professional tech aesthetic. Landscape orientation, minimal text. The logo in the reference image MUST appear in the banner.`;
 
-      const twitterCover = await generate({
-        prompt: coverPrompt,
-        provider: "openai",
-        instructions: "Twitter/X header banner, 1500x500 aspect ratio, landscape, minimal text.",
-        name: `${brand.slug}-twitter-cover`,
-        brandId: brand.id,
-        width: 1500,
-        height: 500,
-      });
-      const { readFileSync } = await import("node:fs");
-      const twitterBuf = readFileSync(twitterCover.filePath);
-      files.push(write(twitterDir, "cover@2x.jpg", twitterBuf));
+      const twitterResult = await openai.generateWithReferences(
+        `Twitter/X header banner. ${coverPrompt}`,
+        [logoRef],
+        { size: "1536x640" },
+      );
+      files.push(write(twitterDir, "cover@2x.png", twitterResult.data));
 
-      const linkedinCover = await generate({
-        prompt: coverPrompt,
-        provider: "openai",
-        instructions: "LinkedIn banner, 1584x396 aspect ratio, landscape, minimal text, professional.",
-        name: `${brand.slug}-linkedin-cover`,
-        brandId: brand.id,
-        width: 1584,
-        height: 396,
-      });
-      const linkedinBuf = readFileSync(linkedinCover.filePath);
-      files.push(write(linkedinDir, "cover@2x.jpg", linkedinBuf));
+      const linkedinResult = await openai.generateWithReferences(
+        `LinkedIn page banner. ${coverPrompt}`,
+        [logoRef],
+        { size: "1536x640" },
+      );
+      files.push(write(linkedinDir, "cover@2x.png", linkedinResult.data));
     } catch (err) {
       errors.push(`Social covers failed: ${err instanceof Error ? err.message : err}`);
     }
   }
 
-  // ── Step 8: Business Cards ─────────────────────────────────────────────────
+  // ── Step 8: Business Cards (with logo reference) ──────────────────────────
   if (!options.skipBusinessCards && options.contactInfo) {
-    console.log("  Generating business cards...");
+    console.log("  Generating business cards (with logo reference)...");
     const cardDir = ensureSubdir(root, "Business Card");
     const ci = options.contactInfo;
+
+    const openai = new OpenAIProvider();
+    const { readFileSync } = await import("node:fs");
+    const logoRef = readFileSync(logo.filePath);
 
     const contactLines = [ci.name, ci.title, ci.email, ci.phone, ci.website, ci.address]
       .filter(Boolean)
       .join("\n");
 
     try {
-      const frontCard = await generate({
-        prompt: `Professional business card FRONT for "${brand.name}". Clean, modern design using brand colors ${primaryColor} and ${secondaryColor}. Include the company logo prominently. Include this contact information exactly as written:\n${contactLines}\n\nStandard business card proportions (3.5x2 inches). High quality print-ready design.`,
-        provider: "openai",
-        instructions: "Business card front. Exact 1050x600 pixels (3.5x2 inches at 300dpi). Render all text perfectly legible. Professional typography.",
-        name: `${brand.slug}-card-front`,
-        brandId: brand.id,
-        width: 1792,
-        height: 1024,
-      });
-      const { readFileSync } = await import("node:fs");
-      const frontBuf = readFileSync(frontCard.filePath);
-      files.push(write(cardDir, "front.png", frontBuf));
+      const frontResult = await openai.generateWithReferences(
+        `Design a professional business card FRONT for "${brand.name}". Use the provided logo — place it in the top-left corner. Use exactly these brand colors: primary ${primaryColor}, secondary ${secondaryColor}, accent ${accentColor}. White background with subtle brand color accents.\n\nInclude this contact information exactly as written, with perfect legible typography:\n${contactLines}\n\nBusiness card proportions (3.5x2 inches). Print-ready, high quality. The logo from the reference MUST appear on the card exactly as-is.`,
+        [logoRef],
+        { size: "1792x1024" },
+      );
+      files.push(write(cardDir, "front.png", frontResult.data));
 
-      const frontSvg = await vectorizeBuffer(frontBuf);
+      const frontSvg = await vectorizeBuffer(frontResult.data);
       if (frontSvg) files.push(write(cardDir, "front.svg", frontSvg));
 
-      const backCard = await generate({
-        prompt: `Professional business card BACK for "${brand.name}". Minimal design with the logo centered on a ${primaryColor} background. Clean, elegant, no text — just the logo.`,
-        provider: "openai",
-        instructions: "Business card back. Same dimensions as front (1050x600). Minimal, elegant.",
-        name: `${brand.slug}-card-back`,
-        brandId: brand.id,
-        width: 1792,
-        height: 1024,
-      });
-      const backBuf = readFileSync(backCard.filePath);
-      files.push(write(cardDir, "back.png", backBuf));
+      const backResult = await openai.generateWithReferences(
+        `Design a professional business card BACK for "${brand.name}". Use the provided logo — place it centered on a solid ${primaryColor} background. Clean, elegant, minimal. No text, just the logo from the reference image centered on the colored background. Business card proportions (3.5x2 inches).`,
+        [logoRef],
+        { size: "1792x1024" },
+      );
+      files.push(write(cardDir, "back.png", backResult.data));
 
-      const backSvg = await vectorizeBuffer(backBuf);
+      const backSvg = await vectorizeBuffer(backResult.data);
       if (backSvg) files.push(write(cardDir, "back.svg", backSvg));
     } catch (err) {
       errors.push(`Business cards failed: ${err instanceof Error ? err.message : err}`);
