@@ -94,17 +94,7 @@ export function ensureSchema(db: Database): void {
     CREATE TABLE IF NOT EXISTS brand_contacts (
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
-      name TEXT,
-      title TEXT,
-      email TEXT,
-      phone TEXT,
-      website TEXT,
-      address TEXT,
-      social_twitter TEXT,
-      social_linkedin TEXT,
-      social_instagram TEXT,
-      social_github TEXT,
-      tagline TEXT,
+      contact_id TEXT NOT NULL,
       is_default INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     )

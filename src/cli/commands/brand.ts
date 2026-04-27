@@ -3,7 +3,7 @@ import chalk from "chalk";
 import { createBrand, getBrand, listBrands, deleteBrand } from "../../db/brands.js";
 import { listLogos } from "../../db/logos.js";
 import { listPalettes, createPalette } from "../../db/palettes.js";
-import { createContact, listContacts } from "../../db/contacts.js";
+import { linkContact, listContactLinks, resolveContact } from "../../db/contacts.js";
 import { listKitRuns, markKitRunFinal, addKitRunNotes } from "../../db/kit-runs.js";
 
 export function registerBrandCommand(program: Command): void {
@@ -120,68 +120,59 @@ export function registerBrandCommand(program: Command): void {
 
   brand
     .command("contact")
-    .description("Set contact info for a brand (used in business cards)")
+    .description("Link an @hasna/contacts contact to a brand (used in business cards)")
     .argument("<brand-id>", "Brand ID or slug")
-    .option("--name <name>", "Contact name")
-    .option("--title <title>", "Job title")
-    .option("--email <email>", "Email")
-    .option("--phone <phone>", "Phone")
-    .option("--website <url>", "Website")
-    .option("--address <addr>", "Address")
-    .option("--twitter <handle>", "Twitter handle")
-    .option("--linkedin <url>", "LinkedIn URL")
-    .option("--instagram <handle>", "Instagram handle")
-    .option("--github <handle>", "GitHub handle")
-    .option("--tagline <text>", "Brand tagline")
-    .action((brandId, opts) => {
+    .argument("<contact-id>", "Contact ID from @hasna/contacts")
+    .action(async (brandId, contactId) => {
       const b = getBrand(brandId);
       if (!b) {
         console.error(chalk.red(`Brand not found: ${brandId}`));
         process.exit(1);
       }
 
-      const contact = createContact({
-        brandId: b.id,
-        name: opts.name, title: opts.title, email: opts.email,
-        phone: opts.phone, website: opts.website, address: opts.address,
-        socialTwitter: opts.twitter, socialLinkedin: opts.linkedin,
-        socialInstagram: opts.instagram, socialGithub: opts.github,
-        tagline: opts.tagline,
-      });
+      const resolved = await resolveContact(contactId);
+      if (!resolved) {
+        console.error(chalk.red(`Contact not found in @hasna/contacts: ${contactId}`));
+        process.exit(1);
+      }
 
-      console.log(chalk.green(`✓ Contact set for ${b.name}`));
-      const fields = [
-        contact.name, contact.title, contact.email, contact.phone,
-        contact.website, contact.tagline,
-      ].filter(Boolean);
-      for (const f of fields) console.log(`  ${f}`);
+      linkContact(b.id, contactId);
+      console.log(chalk.green(`✓ Linked contact to ${b.name}`));
+      if (resolved.name) console.log(`  ${resolved.name}${resolved.title ? ` — ${resolved.title}` : ""}`);
+      if (resolved.email) console.log(`  ${resolved.email}`);
+      if (resolved.phone) console.log(`  ${resolved.phone}`);
+      if (resolved.website) console.log(`  ${resolved.website}`);
     });
 
   brand
     .command("contacts")
-    .description("List contacts for a brand")
+    .description("List linked contacts for a brand")
     .argument("<brand-id>", "Brand ID or slug")
-    .action((brandId) => {
+    .action(async (brandId) => {
       const b = getBrand(brandId);
       if (!b) {
         console.error(chalk.red(`Brand not found: ${brandId}`));
         process.exit(1);
       }
 
-      const contacts = listContacts(b.id);
-      if (contacts.length === 0) {
-        console.log(chalk.dim("No contacts set. Use 'brands brand contact <brand> --name ...' to add one."));
+      const links = listContactLinks(b.id);
+      if (links.length === 0) {
+        console.log(chalk.dim("No contacts linked. Use 'brands brand contact <brand> <contact-id>' to link one."));
         return;
       }
 
-      for (const c of contacts) {
-        const def = c.isDefault ? chalk.green(" [default]") : "";
-        console.log(`  ${chalk.dim(c.id.slice(0, 8))}${def}`);
-        if (c.name) console.log(`    ${c.name}${c.title ? ` — ${c.title}` : ""}`);
-        if (c.email) console.log(`    ${c.email}`);
-        if (c.phone) console.log(`    ${c.phone}`);
-        if (c.website) console.log(`    ${c.website}`);
-        if (c.tagline) console.log(`    "${c.tagline}"`);
+      for (const link of links) {
+        const def = link.isDefault ? chalk.green(" [default]") : "";
+        const resolved = await resolveContact(link.contactId);
+        console.log(`  ${chalk.dim(link.contactId.slice(0, 8))}${def}`);
+        if (resolved) {
+          if (resolved.name) console.log(`    ${resolved.name}${resolved.title ? ` — ${resolved.title}` : ""}`);
+          if (resolved.email) console.log(`    ${resolved.email}`);
+          if (resolved.phone) console.log(`    ${resolved.phone}`);
+          if (resolved.website) console.log(`    ${resolved.website}`);
+        } else {
+          console.log(chalk.yellow(`    (contact ${link.contactId} not found in @hasna/contacts)`));
+        }
       }
     });
 

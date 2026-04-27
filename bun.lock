@@ -6,6 +6,7 @@
       "name": "@hasna/brands",
       "dependencies": {
         "@hasna/brains": "^0.0.21",
+        "@hasna/contacts": "^0.6.16",
         "@hasna/styles": "^0.1.1",
         "@modelcontextprotocol/sdk": "^1.12.1",
         "chalk": "^5.4.1",
@@ -27,6 +28,8 @@
     "@hasna/brains": ["@hasna/brains@0.0.21", "", { "dependencies": { "@hasna/cloud": "^0.1.24", "@modelcontextprotocol/sdk": "^1.12.1", "chalk": "^5.4.1", "commander": "^13.1.0", "drizzle-orm": "^0.40.0", "ink": "^5.2.0", "openai": "^4.0.0", "react": "^18.3.1", "zod": "^3.24.2" }, "bin": { "brains": "dist/cli/index.js", "brains-mcp": "dist/mcp/index.js", "brains-serve": "dist/server/index.js" } }, "sha512-P3lou4pg9P/1g5NRbVE1vnj12kYB/6S7+ZLoCxhi4Yi6vpSmclFRuwcLkG/dfIR3as7zusqXkG3CVE16CgdUiA=="],
 
     "@hasna/cloud": ["@hasna/cloud@0.1.30", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.12.1", "commander": "^13.1.0", "pg": "^8.13.3", "zod": "^3.24.2" }, "bin": { "cloud": "dist/cli/index.js", "cloud-mcp": "dist/mcp/index.js" } }, "sha512-qpDiJNsU/K1cFDk1l+xUA1xEEq8+Q37OdAz/ec0LwrQiA1HyWukzR8Lh7igkOqBT2foa46cxhB7yGnfiT2cWrA=="],
+
+    "@hasna/contacts": ["@hasna/contacts@0.6.16", "", { "dependencies": { "@hasna/cloud": "^0.1.24", "@modelcontextprotocol/sdk": "^1.12.1", "chalk": "^5.4.1", "commander": "^13.1.0", "ink": "^5.2.0", "react": "^18.3.1", "zod": "^3.24.2" }, "bin": { "contacts": "dist/cli/index.js", "contacts-mcp": "dist/mcp/index.js", "contacts-serve": "dist/server/index.js" } }, "sha512-zi/4hZZpdld0uFIErnCqov7lcMtaasvamM7quKR+Pa+PjDnThxgtCRGubyAC1eRDKtwFszy+vQ1X7sWsyfGIqA=="],
 
     "@hasna/styles": ["@hasna/styles@0.1.1", "", { "dependencies": { "@hasna/cloud": "0.1.5", "@modelcontextprotocol/sdk": "^1.26.0", "chalk": "^5.3.0", "commander": "^12.1.0", "ink": "^5.0.1", "ink-select-input": "^6.0.0", "ink-spinner": "^5.0.0", "ink-text-input": "^6.0.0", "playwright": "^1.58.2", "react": "^18.2.0", "zod": "^4.3.6" }, "bin": { "styles": "bin/index.js", "styles-mcp": "bin/mcp.js" } }, "sha512-jjTG+SS1BcQJ75qvBV7A5sxniJp+kR1ruUU2DQPXzoYLncm21cePBXpJQWOKnruG/+7gVl6E696WIwbI+tmPFg=="],
 

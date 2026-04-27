@@ -49,6 +49,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@hasna/brains": "^0.0.21",
+    "@hasna/contacts": "^0.6.16",
     "@hasna/styles": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "chalk": "^5.4.1",

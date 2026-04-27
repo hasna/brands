@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { dataDir } from "../db/database.js";
 import { getBrand, updateBrand } from "../db/brands.js";
 import { getLogo, listLogos } from "../db/logos.js";
-import { getDefaultContact } from "../db/contacts.js";
+import { resolveDefaultContact } from "../db/contacts.js";
 import { createKitRun, completeKitRun, failKitRun } from "../db/kit-runs.js";
 import { generate } from "./generate.js";
 import { OpenAIProvider } from "./providers/openai.js";
@@ -108,7 +108,8 @@ export async function generateVariants(
   const fullInstructions = [
     instructions || "Modern, clean, flat design. Icon only, no text. Suitable for app icons and favicons.",
     colorHint ? `Use these brand colors: ${colorHint}` : "",
-    "White or transparent background.",
+    "White background. Square 1:1 aspect ratio.",
+    "IMPORTANT: The logo/icon must fill approximately 85% of the canvas. Make it large and prominent — edge to edge with minimal padding. Do NOT make it small and centered with lots of whitespace.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -162,12 +163,12 @@ export async function buildBrandKit(options: BrandKitOptions): Promise<BrandKitR
   const logo = getLogo(options.logoId);
   if (!logo) throw new Error(`Logo not found: ${options.logoId}`);
 
-  const contactInfo = options.contactInfo ?? (() => {
-    const stored = getDefaultContact(brand.id);
-    if (!stored) return undefined;
+  const contactInfo = options.contactInfo ?? await (async () => {
+    const resolved = await resolveDefaultContact(brand.id);
+    if (!resolved) return undefined;
     return {
-      name: stored.name, title: stored.title, email: stored.email,
-      phone: stored.phone, website: stored.website, address: stored.address,
+      name: resolved.name, title: resolved.title, email: resolved.email,
+      phone: resolved.phone, website: resolved.website, address: resolved.address,
     };
   })();
 
