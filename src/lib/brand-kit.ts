@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { dataDir } from "../db/database.js";
 import { getBrand, updateBrand } from "../db/brands.js";
 import { getLogo, listLogos } from "../db/logos.js";
+import { getDefaultContact } from "../db/contacts.js";
+import { createKitRun, completeKitRun, failKitRun } from "../db/kit-runs.js";
 import { generate } from "./generate.js";
 import { OpenAIProvider } from "./providers/openai.js";
 import { QuiverProvider } from "./providers/quiver.js";
@@ -36,6 +38,7 @@ export interface BrandKitResult {
   outputDir: string;
   files: string[];
   errors: string[];
+  runId: string;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -159,7 +162,22 @@ export async function buildBrandKit(options: BrandKitOptions): Promise<BrandKitR
   const logo = getLogo(options.logoId);
   if (!logo) throw new Error(`Logo not found: ${options.logoId}`);
 
-  const root = kitDir(brand.slug);
+  const contactInfo = options.contactInfo ?? (() => {
+    const stored = getDefaultContact(brand.id);
+    if (!stored) return undefined;
+    return {
+      name: stored.name, title: stored.title, email: stored.email,
+      phone: stored.phone, website: stored.website, address: stored.address,
+    };
+  })();
+
+  const skipCards = options.skipBusinessCards ?? !contactInfo;
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const root = join(kitDir(brand.slug), timestamp);
+  if (!existsSync(root)) mkdirSync(root, { recursive: true });
+
+  const run = createKitRun(brand.id, logo.id, root);
   const files: string[] = [];
   const errors: string[] = [];
 
@@ -314,10 +332,10 @@ export async function buildBrandKit(options: BrandKitOptions): Promise<BrandKitR
   }
 
   // ── Step 8: Business Cards (with logo reference) ──────────────────────────
-  if (!options.skipBusinessCards && options.contactInfo) {
+  if (!skipCards && contactInfo) {
     console.log("  Generating business cards (with logo reference)...");
     const cardDir = ensureSubdir(root, "Business Card");
-    const ci = options.contactInfo;
+    const ci = contactInfo;
 
     const openai = new OpenAIProvider();
     const { readFileSync } = await import("node:fs");
@@ -352,5 +370,11 @@ export async function buildBrandKit(options: BrandKitOptions): Promise<BrandKitR
     }
   }
 
-  return { outputDir: root, files, errors };
+  if (errors.length && files.length === 0) {
+    failKitRun(run.id, errors);
+  } else {
+    completeKitRun(run.id, files.length, errors);
+  }
+
+  return { outputDir: root, files, errors, runId: run.id };
 }

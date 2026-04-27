@@ -90,9 +90,47 @@ export function ensureSchema(db: Database): void {
     )
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS brand_contacts (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      name TEXT,
+      title TEXT,
+      email TEXT,
+      phone TEXT,
+      website TEXT,
+      address TEXT,
+      social_twitter TEXT,
+      social_linkedin TEXT,
+      social_instagram TEXT,
+      social_github TEXT,
+      tagline TEXT,
+      is_default INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS kit_runs (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      logo_id TEXT NOT NULL REFERENCES logos(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'running',
+      output_dir TEXT NOT NULL,
+      file_count INTEGER NOT NULL DEFAULT 0,
+      errors TEXT NOT NULL DEFAULT '[]',
+      is_final INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      completed_at INTEGER
+    )
+  `);
+
   db.exec("CREATE INDEX IF NOT EXISTS idx_logos_brand_id ON logos(brand_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_logos_provider ON logos(provider)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_assets_logo_id ON assets(logo_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_palettes_brand_id ON palettes(brand_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_generations_status ON generations(status)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_brand_contacts_brand_id ON brand_contacts(brand_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_kit_runs_brand_id ON kit_runs(brand_id)");
 }

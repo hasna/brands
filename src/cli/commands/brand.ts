@@ -3,6 +3,8 @@ import chalk from "chalk";
 import { createBrand, getBrand, listBrands, deleteBrand } from "../../db/brands.js";
 import { listLogos } from "../../db/logos.js";
 import { listPalettes, createPalette } from "../../db/palettes.js";
+import { createContact, listContacts } from "../../db/contacts.js";
+import { listKitRuns, markKitRunFinal, addKitRunNotes } from "../../db/kit-runs.js";
 
 export function registerBrandCommand(program: Command): void {
   const brand = program
@@ -114,5 +116,110 @@ export function registerBrandCommand(program: Command): void {
       const palette = createPalette({ brandId: b.id, name, colors });
       console.log(chalk.green(`✓ Added palette "${palette.name}" to ${b.name}`));
       console.log(`  Colors: ${palette.colors.join(", ")}`);
+    });
+
+  brand
+    .command("contact")
+    .description("Set contact info for a brand (used in business cards)")
+    .argument("<brand-id>", "Brand ID or slug")
+    .option("--name <name>", "Contact name")
+    .option("--title <title>", "Job title")
+    .option("--email <email>", "Email")
+    .option("--phone <phone>", "Phone")
+    .option("--website <url>", "Website")
+    .option("--address <addr>", "Address")
+    .option("--twitter <handle>", "Twitter handle")
+    .option("--linkedin <url>", "LinkedIn URL")
+    .option("--instagram <handle>", "Instagram handle")
+    .option("--github <handle>", "GitHub handle")
+    .option("--tagline <text>", "Brand tagline")
+    .action((brandId, opts) => {
+      const b = getBrand(brandId);
+      if (!b) {
+        console.error(chalk.red(`Brand not found: ${brandId}`));
+        process.exit(1);
+      }
+
+      const contact = createContact({
+        brandId: b.id,
+        name: opts.name, title: opts.title, email: opts.email,
+        phone: opts.phone, website: opts.website, address: opts.address,
+        socialTwitter: opts.twitter, socialLinkedin: opts.linkedin,
+        socialInstagram: opts.instagram, socialGithub: opts.github,
+        tagline: opts.tagline,
+      });
+
+      console.log(chalk.green(`✓ Contact set for ${b.name}`));
+      const fields = [
+        contact.name, contact.title, contact.email, contact.phone,
+        contact.website, contact.tagline,
+      ].filter(Boolean);
+      for (const f of fields) console.log(`  ${f}`);
+    });
+
+  brand
+    .command("contacts")
+    .description("List contacts for a brand")
+    .argument("<brand-id>", "Brand ID or slug")
+    .action((brandId) => {
+      const b = getBrand(brandId);
+      if (!b) {
+        console.error(chalk.red(`Brand not found: ${brandId}`));
+        process.exit(1);
+      }
+
+      const contacts = listContacts(b.id);
+      if (contacts.length === 0) {
+        console.log(chalk.dim("No contacts set. Use 'brands brand contact <brand> --name ...' to add one."));
+        return;
+      }
+
+      for (const c of contacts) {
+        const def = c.isDefault ? chalk.green(" [default]") : "";
+        console.log(`  ${chalk.dim(c.id.slice(0, 8))}${def}`);
+        if (c.name) console.log(`    ${c.name}${c.title ? ` — ${c.title}` : ""}`);
+        if (c.email) console.log(`    ${c.email}`);
+        if (c.phone) console.log(`    ${c.phone}`);
+        if (c.website) console.log(`    ${c.website}`);
+        if (c.tagline) console.log(`    "${c.tagline}"`);
+      }
+    });
+
+  brand
+    .command("runs")
+    .description("List brand kit build runs")
+    .argument("<brand-id>", "Brand ID or slug")
+    .action((brandId) => {
+      const b = getBrand(brandId);
+      if (!b) {
+        console.error(chalk.red(`Brand not found: ${brandId}`));
+        process.exit(1);
+      }
+
+      const runs = listKitRuns(b.id);
+      if (runs.length === 0) {
+        console.log(chalk.dim("No kit runs yet."));
+        return;
+      }
+
+      for (const r of runs) {
+        const date = new Date(r.createdAt).toLocaleString();
+        const final = r.isFinal ? chalk.green(" ★ FINAL") : "";
+        const status = r.status === "completed" ? chalk.green(r.status) : r.status === "failed" ? chalk.red(r.status) : chalk.yellow(r.status);
+        console.log(`  ${chalk.dim(r.id.slice(0, 8))}  ${status}  ${r.fileCount} files  ${chalk.dim(date)}${final}`);
+        if (r.notes) console.log(`    ${chalk.dim(r.notes)}`);
+        console.log(`    ${chalk.dim(r.outputDir)}`);
+      }
+    });
+
+  brand
+    .command("finalize")
+    .description("Mark a kit run as the final deliverable")
+    .argument("<run-id>", "Kit run ID")
+    .option("--notes <text>", "Notes for this deliverable")
+    .action((runId, opts) => {
+      markKitRunFinal(runId);
+      if (opts.notes) addKitRunNotes(runId, opts.notes);
+      console.log(chalk.green(`✓ Run ${runId.slice(0, 8)} marked as final deliverable`));
     });
 }
