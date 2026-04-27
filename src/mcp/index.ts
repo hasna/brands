@@ -16,6 +16,7 @@ import { createPalette, listPalettes } from "../db/palettes.js";
 import { createTrainingSet, listTrainingSets } from "../lib/brains.js";
 import { listGenerations } from "../db/generations.js";
 import { extractBrandFromUrl, extractBrandFromScreenshot, extractBrandFromCssFile } from "../lib/styles.js";
+import { generateVariants, selectLogo, buildBrandKit } from "../lib/brand-kit.js";
 import type { Provider, LogoSource } from "../types/index.js";
 
 const server = new Server(
@@ -221,6 +222,52 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["file_path"],
       },
     },
+    {
+      name: "brand_kit_generate_variants",
+      description: "Generate N logo variants for a brand to choose from",
+      inputSchema: {
+        type: "object",
+        properties: {
+          brand_id: { type: "string", description: "Brand ID or slug" },
+          prompt: { type: "string", description: "Logo description" },
+          variants: { type: "number", description: "Number of variants (default: 4)" },
+          instructions: { type: "string", description: "Style instructions" },
+        },
+        required: ["brand_id", "prompt"],
+      },
+    },
+    {
+      name: "brand_kit_select_logo",
+      description: "Select the primary logo for a brand kit",
+      inputSchema: {
+        type: "object",
+        properties: {
+          brand_id: { type: "string" },
+          logo_id: { type: "string" },
+        },
+        required: ["brand_id", "logo_id"],
+      },
+    },
+    {
+      name: "brand_kit_build",
+      description: "Build a complete brand kit: color variants (black/white/color), SVGs, social avatars, covers, favicons, app icons, shortcut icons, and business cards",
+      inputSchema: {
+        type: "object",
+        properties: {
+          brand_id: { type: "string" },
+          logo_id: { type: "string", description: "Override logo (uses selected if omitted)" },
+          contact_name: { type: "string" },
+          contact_title: { type: "string" },
+          contact_email: { type: "string" },
+          contact_phone: { type: "string" },
+          contact_website: { type: "string" },
+          contact_address: { type: "string" },
+          skip_cards: { type: "boolean" },
+          skip_covers: { type: "boolean" },
+        },
+        required: ["brand_id"],
+      },
+    },
   ],
 }));
 
@@ -367,6 +414,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           args!["file_path"] as string,
           { name: args?.["name"] as string | undefined },
         );
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case "brand_kit_generate_variants": {
+        const logos = await generateVariants(
+          args!["brand_id"] as string,
+          args!["prompt"] as string,
+          (args?.["variants"] as number) || 4,
+          args?.["instructions"] as string | undefined,
+        );
+        return { content: [{ type: "text", text: JSON.stringify(logos, null, 2) }] };
+      }
+
+      case "brand_kit_select_logo": {
+        selectLogo(args!["brand_id"] as string, args!["logo_id"] as string);
+        return { content: [{ type: "text", text: "Logo selected as primary" }] };
+      }
+
+      case "brand_kit_build": {
+        const hasContact = args?.["contact_name"] || args?.["contact_email"];
+        const result = await buildBrandKit({
+          brandId: args!["brand_id"] as string,
+          logoId: args?.["logo_id"] as string || "",
+          contactInfo: hasContact ? {
+            name: args?.["contact_name"] as string,
+            title: args?.["contact_title"] as string,
+            email: args?.["contact_email"] as string,
+            phone: args?.["contact_phone"] as string,
+            website: args?.["contact_website"] as string,
+            address: args?.["contact_address"] as string,
+          } : undefined,
+          skipBusinessCards: (args?.["skip_cards"] as boolean) || !hasContact,
+          skipSocialCovers: args?.["skip_covers"] as boolean,
+        });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
 

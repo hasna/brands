@@ -13,3 +13,5 @@ export { createTrainingSet, getTrainingSet, listTrainingSets } from "./lib/brain
 export { getDb, closeDb } from "./db/database.js";
 export { extractBrandFromUrl, extractBrandFromScreenshot, extractBrandFromCssFile } from "./lib/styles.js";
 export type { ExtractedBrandIdentity } from "./lib/styles.js";
+export { generateVariants, selectLogo, getSelectedLogo, buildBrandKit } from "./lib/brand-kit.js";
+export type { BrandKitOptions, BrandKitResult } from "./lib/brand-kit.js";

@@ -9,6 +9,7 @@ import { registerSvgCommand } from "./commands/svg.js";
 import { registerTrainCommand } from "./commands/train.js";
 import { registerShowCommand } from "./commands/show.js";
 import { registerExtractCommand } from "./commands/extract.js";
+import { registerBrandKitCommand } from "./commands/brand-kit.js";
 
 const program = new Command()
   .name("brands")
@@ -24,5 +25,6 @@ registerBrandCommand(program);
 registerSvgCommand(program);
 registerTrainCommand(program);
 registerExtractCommand(program);
+registerBrandKitCommand(program);
 
 program.parse();
