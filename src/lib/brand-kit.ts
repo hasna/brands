@@ -114,19 +114,28 @@ export async function generateVariants(
     .filter(Boolean)
     .join(" ");
 
+  const concurrency = Math.min(count, 4);
   const logos: Logo[] = [];
-  for (let i = 0; i < count; i++) {
-    try {
-      const logo = await generate({
+
+  for (let batch = 0; batch < count; batch += concurrency) {
+    const batchSize = Math.min(concurrency, count - batch);
+    const promises = Array.from({ length: batchSize }, (_, i) => {
+      const idx = batch + i + 1;
+      return generate({
         prompt,
         provider: "openai",
         instructions: fullInstructions,
-        name: `${brand.slug}-variant-${i + 1}`,
+        name: `${brand.slug}-variant-${idx}`,
         brandId: brand.id,
+      }).catch((err) => {
+        console.error(`Variant ${idx} failed: ${err instanceof Error ? err.message : err}`);
+        return null;
       });
-      logos.push(logo);
-    } catch (err) {
-      console.error(`Variant ${i + 1} failed: ${err instanceof Error ? err.message : err}`);
+    });
+
+    const results = await Promise.all(promises);
+    for (const r of results) {
+      if (r) logos.push(r);
     }
   }
 
