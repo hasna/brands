@@ -1,0 +1,63 @@
+{
+  "name": "@hasna/brands",
+  "version": "0.0.1",
+  "description": "AI-powered brand identity toolkit — generate logos, color palettes, and export production-ready assets via CLI, MCP, and SDK",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "brands": "dist/cli/index.js",
+    "brands-mcp": "dist/mcp/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build src/cli/index.ts --outdir dist/cli --target bun --external @modelcontextprotocol/sdk --external sharp --external playwright && bun build src/mcp/index.ts --outdir dist/mcp --target bun --external @modelcontextprotocol/sdk --external sharp --external playwright && bun build src/index.ts --outdir dist --target bun --external sharp --external playwright && tsc --emitDeclarationOnly --outDir dist",
+    "dev:cli": "bun run src/cli/index.ts",
+    "dev:mcp": "bun run src/mcp/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run build",
+    "postinstall": "mkdir -p $HOME/.hasna/brands/outputs $HOME/.hasna/brands/exports $HOME/.hasna/brands/imports $HOME/.hasna/brands/training 2>/dev/null || true"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hasna/brands.git"
+  },
+  "homepage": "https://github.com/hasna/brands",
+  "bugs": {
+    "url": "https://github.com/hasna/brands/issues"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "author": "Andrei Hasna <andrei@hasna.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@hasna/brains": "^0.0.21",
+    "@hasna/styles": "^0.1.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "sharp": "^0.33.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.4",
+    "typescript": "^5.7.3"
+  }
+}
