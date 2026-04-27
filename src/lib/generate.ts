@@ -5,7 +5,14 @@ import { createLogo } from "../db/logos.js";
 import { createGeneration, completeGeneration, failGeneration } from "../db/generations.js";
 import { getProvider, DEFAULT_MODELS } from "./providers/index.js";
 import { saveSvg } from "./svg.js";
+import { QuiverProvider } from "./providers/quiver.js";
 import type { GenerateOptions, Logo, Provider } from "../types/index.js";
+
+async function vectorizeRasterToSvg(rasterPath: string): Promise<string> {
+  const quiver = new QuiverProvider();
+  const result = await quiver.vectorize({ imagePath: rasterPath, autoCrop: true });
+  return result.svg;
+}
 
 export async function generate(options: GenerateOptions): Promise<Logo> {
   const providerName = options.provider || "openai";
@@ -27,33 +34,17 @@ export async function generate(options: GenerateOptions): Promise<Logo> {
   });
 
   try {
-    if (options.svg && provider.supportsSvg && provider.generateSvg) {
-      const result = await provider.generateSvg(options);
-      const logoId = crypto.randomUUID();
-      const svgPath = saveSvg(logoId, result.svg);
-
-      const logo = createLogo({
-        name: options.name || `logo-${Date.now()}`,
-        brandId: options.brandId,
-        prompt: options.prompt,
-        instructions: options.instructions,
-        provider: providerName,
-        model,
-        format: "svg",
-        filePath: svgPath,
-        svgPath,
-        metadata: result.metadata ?? {},
-        source: "generated",
-      });
-
-      completeGeneration(gen.id, logo.id, (result.metadata?.["credits"] as number) ?? undefined);
-      return logo;
-    }
-
     const result = await provider.generate(options);
     const ext = result.format || "png";
     const filePath = join(outputsDir(), `${crypto.randomUUID()}.${ext}`);
     writeFileSync(filePath, result.data);
+
+    let svgPath: string | undefined;
+    if (options.svg && ext !== "svg") {
+      const svgContent = await vectorizeRasterToSvg(filePath);
+      const logoId = crypto.randomUUID();
+      svgPath = saveSvg(logoId, svgContent);
+    }
 
     const logo = createLogo({
       name: options.name || `logo-${Date.now()}`,
@@ -62,8 +53,9 @@ export async function generate(options: GenerateOptions): Promise<Logo> {
       instructions: options.instructions,
       provider: providerName,
       model,
-      format: result.format,
+      format: ext === "svg" ? "svg" : result.format,
       filePath,
+      svgPath,
       width: result.width,
       height: result.height,
       metadata: result.metadata ?? {},

@@ -79,19 +79,23 @@ export class QuiverProvider implements ProviderInterface {
     const model = options.model || DEFAULT_MODEL;
     const apiKey = getApiKey();
 
+    const sharp = (await import("sharp")).default;
     const { readFileSync } = await import("node:fs");
-    const imageData = readFileSync(options.imagePath);
-    const base64 = imageData.toString("base64");
+    const rawData = readFileSync(options.imagePath);
+
+    const resized = await sharp(rawData)
+      .resize(512, 512, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .png()
+      .toBuffer();
+
+    const base64 = resized.toString("base64");
 
     const body: Record<string, unknown> = {
       model,
       image: { base64 },
+      auto_crop: true,
       stream: false,
     };
-
-    if (options.autoCrop) {
-      body.auto_crop = true;
-    }
 
     const response = await fetch(`${API_BASE}/svgs/vectorizations`, {
       method: "POST",
