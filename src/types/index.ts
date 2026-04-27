@@ -92,6 +92,7 @@ export interface GenerateOptions {
   brandId?: string;
   name?: string;
   svg?: boolean;
+  referenceImage?: string;
 }
 
 export interface ExportPreset {

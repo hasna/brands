@@ -1,9 +1,10 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { outputsDir } from "../db/database.js";
 import { createLogo } from "../db/logos.js";
 import { createGeneration, completeGeneration, failGeneration } from "../db/generations.js";
 import { getProvider, DEFAULT_MODELS } from "./providers/index.js";
+import { OpenAIProvider } from "./providers/openai.js";
 import { saveSvg } from "./svg.js";
 import { QuiverProvider } from "./providers/quiver.js";
 import type { GenerateOptions, Logo, Provider } from "../types/index.js";
@@ -34,7 +35,20 @@ export async function generate(options: GenerateOptions): Promise<Logo> {
   });
 
   try {
-    const result = await provider.generate(options);
+    let result;
+    if (options.referenceImage && providerName === "openai") {
+      const openai = new OpenAIProvider();
+      const refBuf = readFileSync(options.referenceImage);
+      const prompt = options.instructions
+        ? `${options.instructions}\n\n${options.prompt}`
+        : options.prompt;
+      const size = options.width && options.height
+        ? `${options.width}x${options.height}`
+        : "1024x1024";
+      result = await openai.generateWithReferences(prompt, [refBuf], { size });
+    } else {
+      result = await provider.generate(options);
+    }
     const ext = result.format || "png";
     const filePath = join(outputsDir(), `${crypto.randomUUID()}.${ext}`);
     writeFileSync(filePath, result.data);

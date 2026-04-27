@@ -97,6 +97,7 @@ export async function generateVariants(
   prompt: string,
   count: number = 4,
   instructions?: string,
+  referenceImage?: string,
 ): Promise<Logo[]> {
   const brand = getBrand(brandId);
   if (!brand) throw new Error(`Brand not found: ${brandId}`);
@@ -109,7 +110,7 @@ export async function generateVariants(
     instructions || "Modern, clean, flat design. Icon only, no text. Suitable for app icons and favicons.",
     colorHint ? `Use these brand colors: ${colorHint}` : "",
     "White background. Square 1:1 aspect ratio.",
-    "IMPORTANT: The logo/icon must fill approximately 85% of the canvas. Make it large and prominent — edge to edge with minimal padding. Do NOT make it small and centered with lots of whitespace.",
+    "IMPORTANT: The logo/icon must be large and prominent, filling roughly 70% of the canvas. Leave a thin margin of whitespace around all edges — the icon should NOT touch or extend beyond the canvas boundaries. Center it with even padding on all sides.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -127,6 +128,7 @@ export async function generateVariants(
         instructions: fullInstructions,
         name: `${brand.slug}-variant-${idx}`,
         brandId: brand.id,
+        referenceImage,
       }).catch((err) => {
         console.error(`Variant ${idx} failed: ${err instanceof Error ? err.message : err}`);
         return null;

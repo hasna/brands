@@ -17,6 +17,7 @@ export function registerBrandKitCommand(program: Command): void {
     .argument("<prompt>", "Logo description")
     .option("--variants <count>", "Number of variants (default: 4)")
     .option("-i, --instructions <text>", "Style instructions")
+    .option("--ref <path>", "Reference image to base variants on")
     .action(async (brandId, prompt, opts) => {
       const brand = getBrand(brandId);
       if (!brand) {
@@ -25,9 +26,9 @@ export function registerBrandKitCommand(program: Command): void {
       }
 
       const count = parseInt(opts.variants || "4", 10);
-      console.log(chalk.blue(`Generating ${count} logo variants for ${brand.name}...\n`));
+      console.log(chalk.blue(`Generating ${count} logo variants for ${brand.name}${opts.ref ? " (with reference)" : ""}...\n`));
 
-      const logos = await generateVariants(brand.id, prompt, count, opts.instructions);
+      const logos = await generateVariants(brand.id, prompt, count, opts.instructions, opts.ref);
 
       console.log(chalk.green(`\n✓ ${logos.length} variants generated:\n`));
       for (const logo of logos) {

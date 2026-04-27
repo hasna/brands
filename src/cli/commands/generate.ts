@@ -17,6 +17,7 @@ export function registerGenerateCommand(program: Command): void {
     .option("-w, --width <px>", "Width in pixels", parseInt)
     .option("-h, --height <px>", "Height in pixels", parseInt)
     .option("-i, --instructions <text>", "Style instructions")
+    .option("--ref <path>", "Reference image path (uses OpenAI edit endpoint)")
     .option("--all", "Generate with all providers")
     .action(async (prompt, opts) => {
       try {
@@ -40,8 +41,8 @@ export function registerGenerateCommand(program: Command): void {
           return;
         }
 
-        const provider = (opts.provider as Provider) || (opts.svg ? "quiver" : undefined);
-        console.log(chalk.blue(`Generating with ${provider || "default provider"}...`));
+        const provider = (opts.provider as Provider) || (opts.ref ? "openai" : undefined) || (opts.svg ? "quiver" : undefined);
+        console.log(chalk.blue(`Generating with ${provider || "default provider"}${opts.ref ? " (with reference)" : ""}...`));
 
         const logo = await generate({
           prompt,
@@ -53,6 +54,7 @@ export function registerGenerateCommand(program: Command): void {
           width: opts.width,
           height: opts.height,
           svg: opts.svg,
+          referenceImage: opts.ref,
         });
 
         console.log(chalk.green(`✓ Generated: ${logo.name}`));
